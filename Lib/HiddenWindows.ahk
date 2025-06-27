@@ -1,23 +1,26 @@
-class HiddenWindowsMenu extends WindowMenu {
-    __New(header := "Hidden windows") {
-        super.__New(header)
+class HiddenWindowsMenu extends WindowsMenu {  
+    static windows := Map()
+    
+    __New() {
+        global showProcessName
+        super.__New("Hidden " . (showProcessName ? "apps" : "windows"))      
+
         this.RestoreMenu()
-        
-        .AddOptions([
-            ["&Settings", ShowSettings,   "settings.ico"],
-            ["&Exit",     (*) => ExitApp, "close.ico"]
+        this.AddOptions([
+            ["&Settings", ShowSettings,     "settings.ico"],
+            ["&Exit",     (*) => ExitApp(), "close.ico"]
         ])
         
-        OnExit(this.ShowWindows)
+        OnExit(this.ShowWindows.bind(this))
     }
     
     RestoreMenu(*) {
-        for id, _ in WindowMenu.windows
+        for id, _ in this.class.windows
             this.InsertWindow(id, this.ShowWindow.Bind(this, id))
     }
     
     ShowWindows(*) {
-        for id, _ in WindowMenu.windows
+        for id, _ in this.class.windows
             try WinShow("ahk_id " id)
     }
     
@@ -28,9 +31,9 @@ class HiddenWindowsMenu extends WindowMenu {
             
             WinShow("ahk_id " id)
     
-            WindowMenu.windows.Delete(id)
+            this.class.windows.Delete(id)
             this.Delete(itemPos . "&")
-        } catch TargetError as e {
+        } catch as e {
             LogError(e, this.GetProcessName(id))
         }
     }
@@ -40,12 +43,12 @@ class HiddenWindowsMenu extends WindowMenu {
             if !id
                 id := WinGetID("A")
         
-            if (WindowMenu.windows.Has(id))
+            if (this.class.windows.Has(id))
                 return
 
             WinHide("ahk_id " id)
             this.InsertWindow(id, this.ShowWindow.Bind(this, id))    
-        } catch TargetError as e {
+        } catch as e {
             LogError(e, this.GetProcessName(id))
         }
     }

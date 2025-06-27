@@ -1,4 +1,4 @@
-class WindowMenu extends Menu {
+class WindowsMenu extends Menu {
     /*
         Creates a menu with the specified title and 
         calculates the coordinates to display Menu in the center. 
@@ -7,23 +7,25 @@ class WindowMenu extends Menu {
         To display in the center, it calculates the offset of the coordinates of the upper-left corner of the menu 
         from the center of the screen based on the size of the elements (icon size, indentation, name length). 
         Each magic number is calculated for centering with high accuracy in all cases.
-        
-        @param header The gray title of the menu
     */
     
     static windows := Map()
     
     __New(header := "Windows") {
         global 
-        Menu.Call()  
+        Menu()  
         
         ; Permanent window appearance parameters
         this.showIcons   := showIcons
         this.iconsDir    := iconsDir
         this.iconSize    := iconSize
+        this.showAgain   := showMenuAgain
+        this.showProcess := showProcessName
+        this.titleLength := titleLength
+        this.class       := %this.__Class%
 
         ; Calculate position offset based on the icon size and visibility
-        this.iconOffset  := Max(iconSize, 16) * showIcons / 4  ; 0 if the icons are turned off. Min. is 16
+        this.iconOffset  := Max(iconSize, 16) * showIcons / 4   ; 0 if the icons are turned off. Min. is 16
         this.offsetX     := this.iconOffset                     ; Initial offset, increases if long windows are added.
         this.offsetY     := 0                                   ; Increases only if windows are added
         
@@ -31,23 +33,10 @@ class WindowMenu extends Menu {
         this.posY        := A_ScreenHeight / 2                             ; Screen center
         this.posX        := A_ScreenWidth  / 2 - (110 + this.iconOffset)   ; Screen center minus menu margins (including icons)
         
-        ; Show menu again after callback
-        this.callbackFn  := showMenuAgain ? this.__ShowAgain.bind(this) : (callback, *) => callback.call()
-        
-        ; Show windown process name
-        this.getTitleFn  := showProcessName ? this.GetProcessName.bind(this) : this.GetShortTitle.bind(this, titleLength)
-        
         this.AddHeader(header)
     }
 
-    /*
-        Adds a header to the menu and increases the offset accordingly.
-        
-        This method creates a header item in the menu and updates the offsets
-        to account for the header's size.
-        
-        @param title   The title of the header to be added.
-    */
+    ; Adds a header item
     AddHeader(title) {
         this.Add(title, this.__NoOperation)
         this.Disable(title)
@@ -58,16 +47,12 @@ class WindowMenu extends Menu {
         Adds options after windows or updates existing ones.
         
         The options must be defined as an array of arrays, where each inner
-        array contains the option title, callback function, and icon name. This method
-        also updates the offsets based on the titles of the added options.
-        
-        @param options   An array of options to be added to the menu
+        array contains the option title, callback function, and icon name.
     */
     AddOptions(options) {
         this.Add()   ; separator
         this.AddHeader("Options")
         
-        longTitle := ""
         for _, option in options {
             title := option[1]
             this.Add(title, option[2])
@@ -76,37 +61,24 @@ class WindowMenu extends Menu {
         }        
     }
 
-    /*
-        Inserts a new window into the menu at a specified position.
-        
-        This method allows for the insertion of a new menu item at a specific
-        position, along with its associated icon and callback function. The
-        offsets are updated accordingly.
-        
-        @param title     The title for the window in the menu
-        @param callback  The callback function to be executed when the window is selected.
-        @param icon      The icon associated with the window (optional).
-        @param pos       The position at which to insert the window (optional).
-    */
+    ; Inserts a new window with its associated icon and callback at a specified position.
     InsertWindow(id, callback, icon := "", pos := 2) {
-        title := this.getTitleFn.Call(id)
         icon  := WinGetProcessPath("ahk_id " id)
-        
-        this.Insert(pos . "&", title, this.callbackFn.Bind(callback))
+        title := this.showProcess 
+               ? this.GetProcessName(id) 
+               : this.GetShortTitle(id, this.titleLength) 
+                       
+        this.Insert(pos . "&", title, this.__ShowAgain.bind(this, callback))
         this.EditIcon(title, icon)
         
-        WindowMenu.windows[id] := true
+        this.class.windows[id] := true
         this.__IncreaseOffset(title)            
     }
 
     /*
-        Edits the icon for a specified menu item.
-        
-        If icons are enabled and a icon path is provided, this method sets
-        the icon for the specified menu item. It also updates the vertical offset.
-        
-        @param title  The title of the menu item for which the icon is to be set.
-        @param icon   The full path to the icon file (optional).
+        Edits the icon for a specified menu item.        
+        If icons are enabled and a icon path is provided, sets
+        the icon for the specified menu item.
     */
     EditIcon(title, icon := "") {
         if !(this.showIcons && icon)
@@ -124,7 +96,7 @@ class WindowMenu extends Menu {
     GetProcessName(id) => SubStr(WinGetProcessName("ahk_id " id), 1, -4)
     
     ; Slice everything before maxLength: LongLongTitle -> Long...
-    GetShortTitle(maxLength, id) {
+    GetShortTitle(id, maxLength) {
         try {
             title := WinGetTitle("ahk_id " id)
             style := WinGetstyle("ahk_id " id)
@@ -139,8 +111,9 @@ class WindowMenu extends Menu {
             return title
     
         } catch as e {
-            LogError(e, id)
-            return "Window"
+            name := this.GetProcessName(id)
+            LogError(e, name)
+            return name
         }
     }
     
@@ -158,8 +131,7 @@ class WindowMenu extends Menu {
         The icon offset is added to the result. The larger the icon, the greater the offset. 
         To ensure that the result is not less than existing offset, Max() is used. 
         
-        VERTICAL OFFSET: constant height of the item plus the necessary offset for large icons.
-        @param lastOption   The title of the last option added to the menu.
+        VERTICAL OFFSET: constant height of the item plus the necessary offset for large icons.u.
     */
     __IncreaseOffset(lastOption) {
         this.offsetX := Max(this.offsetX, (StrLen(lastOption) ** 2 / 16) + this.iconOffset)
@@ -169,9 +141,11 @@ class WindowMenu extends Menu {
     ; Call the function and show the Menu
     __ShowAgain(callback, *) {
         callback.call()
-        this.ShowCenter()
+        
+        if this.showAgain
+            this.ShowCenter()
     }
     
-    ; This method is used as a placeholder for menu headers
+    ; Placeholder for special items
     __NoOperation(*) => 0
 }
