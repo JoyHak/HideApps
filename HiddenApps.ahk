@@ -10,22 +10,15 @@ CoordMode("Menu", "Screen")
 #Include <Log>
 #Include <Values>
 #Include <Settings>
-#Include <WindowMenu>
+#Include <WindowsMenu>
 #Include <HiddenWindows>
+#Include <AltTabWindows>
 
 SetDefaultValues()
 ReadValues()
 
 TraySetIcon(iconMain)
-InitMenus()
 InitAutoStartup()
-
-InitMenus() {
-    ; Re-creates a menus based on global parameters
-    global showProcessName
-
-    HiddenWinMenu := HiddenWindowsMenu("Hidden " . (showProcessName ? "apps" : "windows"))
-}
 
 InitAutoStartup() {
     ; Creates a shortcut to the application in shell:startup
@@ -47,15 +40,11 @@ InitAutoStartup() {
 }
 
 ; Win + Mouse Forward
-$#XButton2::HiddenWinMenu.HideWindow()    
+#XButton2::HiddenWindowsMenu().HideWindow()    
 ; Alt + Tilde ~ (backtick `)
-$!sc029::HiddenWinMenu.ShowCenter()   
+!sc029::HiddenWindowsMenu().ShowCenter()   
 ; Win + Tilde ~ (backtick `)
-;$#sc029:: 
-
-#HotIf WinActive("ahk_exe notepad++.exe")
-~^s::Reload
-
+#sc029::AltTabWindowsMenu().ShowCenter()
 
 
 

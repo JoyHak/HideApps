@@ -66,11 +66,8 @@ SaveSettings(ui, *) {
     
     WriteValues(ui)
     ReadValues()
-    TraySetIcon(iconMain)
-    
-    InitMenus()
     InitAutoStartup()
-    HiddenWinMenu.ShowCenter()
+    TraySetIcon(iconMain)
 }
 
 ResetSettings(ui, *) {
@@ -79,10 +76,8 @@ ResetSettings(ui, *) {
     FileDelete(ini)
     
     SetDefaultValues()
-    
+    InitAutoStartup()    
     TraySetIcon(iconMain)
-    InitMenus()
-    InitAutoStartup()
     
     ui.Destroy()
     ShowSettings()
